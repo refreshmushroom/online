@@ -1,0 +1,180 @@
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        header {
+            background: #4facfe;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .birthday-prompt {
+            font-size: 0.95em;
+            opacity: 0.9;
+            margin-bottom: 12px;
+        }
+        
+        .user-info {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .user-info input {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            width: 180px;
+            font-size: 16px;
+        }
+        
+        .experience-card {
+            background: #f8f9fa;
+            padding: 25px 20px;
+            margin: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px dashed #e9ecef;
+        }
+        
+        .level-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #3498db;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .task-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 0 20px 20px 20px;
+            border-radius: 12px;
+            border: 2px dashed #e9ecef;
+        }
+        
+        .section-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .task-list {
+            list-style: none;
+        }
+        
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .task-item.completed {
+            opacity: 0.5;
+            color: #7f8c8d;
+        }
+        
+        .task-text {
+            flex: 1;
+        }
+        
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #4facfe;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .task-checkbox.completed {
+            background: #4facfe;
+            color: white;
+            border-color: #4facfe;
+        }
+        
+        .custom-task {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .custom-task input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .knowledge-card {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 0 20px 20px 20px;
+            border-radius: 12px;
+            border: 2px dashed #e9ecef;
+            text-align: center;
+            font-style: italic;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+        
+        .dev-soon {
+            color: #95a5a6;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>

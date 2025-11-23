@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>只悬不赏金任务板</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>只悬不赏金任务板</h1>
+            <div class="birthday-prompt">请输入您的生日用以计算等级经验值</div>
+            <div class="user-info">
+                <input type="date" id="birthDate" placeholder="出生日期" onchange="calculateExperience()">
+            </div>
+        </header>
+
+        <main>
+            <!-- 经验值显示 -->
+            <div class="experience-card">
+                <div class="level-display" id="levelDisplay">XX级 XX%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div>经验值</div>
+            </div>
+
+            <!-- 每日任务板 -->
+            <div class="task-section">
+                <div class="section-title">每日任务板</div>
+                <ul class="task-list" id="dailyTasks">
+                    <!-- 任务由 script.js 动态生成 -->
+                </ul>
+            </div>
+
+            <!-- 自定义任务 -->
+            <div class="task-section">
+                <div class="section-title">自定义任务</div>
+                <div class="custom-task">
+                    <input type="text" id="customTaskInput" placeholder="添加新任务...">
+                    <button onclick="addCustomTask()">添加</button>
+                </div>
+                <ul class="task-list" id="customTasks">
+                    <!-- 自定义任务由 script.js 动态生成 -->
+                </ul>
+                <div class="task-limit" id="taskLimit">今日还可添加 X 条任务</div>
+            </div>
+
+            <!-- 小知识 -->
+            <div class="knowledge-card">
+                <div id="knowledgeText">加载中...</div>
+            </div>
+
+            <!-- 社区任务（开发中） -->
+            <div class="task-section">
+                <div class="section-title">
+                    <span>社区任务</span>
+                    <span class="dev-soon">开发中</span>
+                </div>
+                <div style="text-align: center; color: #95a5a6; padding: 20px;">
+                    功能开发中，敬请期待！
+                </div>
+            </div>
+
+            <!-- 多人任务（开发中） -->
+            <div class="task-section">
+                <div class="section-title">
+                    <span>多人任务</span>
+                    <span class="dev-soon">开发中</span>
+                </div>
+                <div style="text-align: center; color: #95a5a6; padding: 20px;">
+                    功能开发中，敬请期待！
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
