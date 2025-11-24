@@ -10,8 +10,10 @@
     <div class="container">
         <header>
             <h1>只悬不赏金任务板</h1>
-            <div class="user-info">
-                <input type="date" id="birthDate" placeholder="出生日期" onchange="calculateExperience()" />
+            <div style="font-size: 0.95em; color: #e0f7fa; margin-bottom: 8px; text-align: center;">
+                请输入您的出生日期用以计算您当前等级状态
+            </div>
+            <input type="date" id="birthDate" onchange="calculateExperience()" />
             </div>
         </header>
 
@@ -31,13 +33,14 @@
                 <ul class="task-list" id="dailyTasks"></ul>
             </div>
 
-            <!-- 长期任务（替换原自定义任务） -->
+            <!-- 长期任务-->
             <div class="task-section">
                 <div class="section-title">长期任务</div>
                 <div class="long-term-form">
                     <input type="text" id="longTermGoal" placeholder="输入长期目标，如：3个月学会Python" />
-                    <input type="date" id="deadline" placeholder="截止日期" />
-                    <textarea id="dailyPlan" placeholder="每日计划，如：每天背30个单词、读10页书" rows="2"></textarea>
+                    <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 4px;">请输入该任务截至时间</div>
+                    <input type="date" id="deadline" />
+                    <textarea id="dailyPlan" placeholder="请分解您的长期任务至每日计划中，如：每天学习1小时Python课程" rows="10"></textarea>
                     <button onclick="setLongTermTask()">设定目标</button>
                 </div>
                 <div id="longTermDisplay"></div>
@@ -45,7 +48,7 @@
 
             <!-- 小知识 -->
             <div class="knowledge-card">
-                <div id="knowledgeText">加载中...</div>
+                <div>地球online小知识：<span id="knowledgeText">加载中...</span></div>
             </div>
 
             <!-- 社区任务（开发中） -->
