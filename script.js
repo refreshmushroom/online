@@ -3,7 +3,7 @@
         "喝一杯水", "接一杯水", "站起来跳3下", "原地转3圈", 
         "在任意平台收藏一个自己喜欢/感兴趣的帖子", "听一首自己喜欢的歌", "认认真真刷2分钟牙", "做3次深呼吸",
         "伸个懒腰", "学鸭子走路", "拍一张天空的照片","顺时针扭动手腕10次", "找到三个紫色物品", "对着空气来两拳",
-        "对着生活笑一笑算辽", "确认自己明天有那些紧急工作", "试着约别人一起吃饭","绕着房间走一圈",
+        "对着生活笑一笑算辽", "试着约别人一起吃饭","绕着房间走一圈", "打扫一遍房间",
         "闭目休息60秒", "阅读身边最近一个物品上的文字", "吃掉自己身边最近的食物","与任意NPC说早安/晚安",
     ];
 
@@ -87,9 +87,10 @@ function calculateExperience() {
     updateExperienceDisplay();
 }
 
-function updateExperienceDisplay() {
-    document.getElementById('levelDisplay').textContent = `${userData.level}级 ${userData.experience}%`;
-    document.getElementById('progressFill').style.width = `${userData.experience}%`;
+function toggleTaskCompletion(index) {
+    userData.dailyTasks[index].completed = !userData.dailyTasks[index].completed;
+    saveUserData();
+    renderTasks();
 }
 
 // ============== 任务生成与渲染 ==============
@@ -108,15 +109,33 @@ function renderTasks() {
     const list = document.getElementById('dailyTasks');
     list.innerHTML = '';
 
-    const pending = userData.dailyTasks.filter(t => !t.completed);
-    const completed = userData.dailyTasks.filter(t => t.completed);
+    const today = new Date();
 
-    [...pending, ...completed].forEach((task, i) => {
+    // 渲染所有任务，包括长期任务的每日计划
+    userData.dailyTasks.forEach((task, i) => {
         const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && t.completed === task.completed);
         const li = document.createElement('li');
         li.className = `task-item ${task.completed ? 'completed' : ''}`;
         
-        // 仅在已完成时显示 ✓，否则留空
+        // 提取每日计划和倒计时天数
+        const match = task.text.match(/^(.*) · 倒计时 (\d+)天$/);
+        let taskText = task.text;
+        let daysLeft = 0;
+        if (match) {
+            taskText = match[1];
+            daysLeft = parseInt(match[2], 10);
+            
+            // 更新倒计时
+            daysLeft = calculateDaysLeft(userData.longTermTask.deadline);
+            if (daysLeft > 0) {
+                task.text = `${taskText} · 倒计时 ${daysLeft}天`;
+            } else if (daysLeft === 0) {
+                task.text = `${taskText} · 今天截止！`;
+            } else {
+                task.text = `${taskText} · 已到期`;
+            }
+        }
+
         const checkboxContent = task.completed ? '✓' : '';
         const checkboxClass = task.completed ? 'task-checkbox completed' : 'task-checkbox';
         
@@ -139,9 +158,17 @@ function setLongTermTask() {
         return;
     }
 
+    // 添加长期任务的每日计划到每日任务列表中
     userData.longTermTask = { goal, deadline, plan, createdAt: new Date().toISOString() };
+    
+    // 确保每日计划不会重复添加
+    const existingTaskIndex = userData.dailyTasks.findIndex(task => task.text === plan);
+    if (existingTaskIndex === -1) {
+        userData.dailyTasks.unshift({ text: `${plan} · 倒计时 ${calculateDaysLeft(deadline)}天`, completed: false });
+    }
+    
     saveUserData();
-    displayLongTermTask();
+    renderTasks(); // 重新渲染任务列表
 
     // 清空表单
     document.getElementById('longTermGoal').value = '';
@@ -149,23 +176,11 @@ function setLongTermTask() {
     document.getElementById('dailyPlan').value = '';
 }
 
-function displayLongTermTask() {
-    const container = document.getElementById('longTermDisplay');
-    container.innerHTML = '';
-
-    if (!userData.longTermTask) return;
-
-    const { goal, deadline, plan } = userData.longTermTask;
-    const daysLeft = Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
-
-    const div = document.createElement('div');
-    div.className = 'long-term-task';
-    div.innerHTML = `
-        <div class="task-text">${goal}</div>
-        <div class="task-text">每日计划：${plan}</div>
-        <div class="countdown">倒计时：${daysLeft > 0 ? daysLeft + '天' : '已到期'}</div>
-    `;
-    container.appendChild(div);
+// 计算剩余天数
+function calculateDaysLeft(deadline) {
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    return Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
 }
 
 // ============== 小知识 ==============
