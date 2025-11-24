@@ -29,206 +29,179 @@
         "小知识：刚烧开的水比放置一会儿的水更烫",
         "与外域NPC沟通不畅？试试增加语言拓展包",
     ];
-    
-    // 用户数据
-    let userData = {
+
+// ============== 用户数据 ==============
+let userData = {
+    level: 0,
+    experience: 0,
+    dailyTasks: [],
+    longTermTask: null, // 新增字段
+    lastReset: null
+};
+
+// ============== 初始化 ==============
+window.onload = function () {
+    loadUserData();
+    initApp();
+};
+
+function initApp() {
+    const today = new Date().toDateString();
+
+    if (!userData.lastReset || userData.lastReset !== today) {
+        userData.dailyTasks = generateRandomTasks(3);
+        userData.lastReset = today;
+        saveUserData();
+    }
+
+    renderTasks();
+    updateKnowledge();
+    displayLongTermTask(); // 显示长期任务
+
+    const birthDate = document.getElementById('birthDate').value;
+    if (birthDate) {
+        calculateExperience();
+    }
+}
+
+// ============== 经验值计算 ==============
+function calculateExperience() {
+    const birthDateInput = document.getElementById('birthDate').value;
+    if (!birthDateInput) return;
+
+    const birthDate = new Date(birthDateInput);
+    const today = new Date();
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    const totalMonths = years * 12 + months;
+    userData.level = Math.floor(totalMonths / 12);
+    userData.experience = Math.floor((totalMonths % 12) / 12 * 100);
+
+    saveUserData();
+    updateExperienceDisplay();
+}
+
+function updateExperienceDisplay() {
+    document.getElementById('levelDisplay').textContent = `${userData.level}级 ${userData.experience}%`;
+    document.getElementById('progressFill').style.width = `${userData.experience}%`;
+}
+
+// ============== 任务生成与渲染 ==============
+function generateRandomTasks(count) {
+    const shuffled = [...dailyTaskPool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count).map(task => ({ text: task, completed: false }));
+}
+
+function toggleTaskCompletion(index) {
+    userData.dailyTasks[index].completed = !userData.dailyTasks[index].completed;
+    saveUserData();
+    renderTasks();
+}
+
+function renderTasks() {
+    const list = document.getElementById('dailyTasks');
+    list.innerHTML = '';
+
+    // 先渲染未完成，再渲染已完成
+    const pending = userData.dailyTasks.filter(t => !t.completed);
+    const completed = userData.dailyTasks.filter(t => t.completed);
+
+    [...pending, ...completed].forEach((task, i) => {
+        const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && t.completed === task.completed);
+        const li = document.createElement('li');
+        li.className = `task-item ${task.completed ? 'completed' : ''}`;
+        li.innerHTML = `
+            <div class="task-text">${task.text}</div>
+            <div class="task-checkbox ${task.completed ? 'completed' : ''}" 
+                 onclick="toggleTaskCompletion(${originalIndex})">✓</div>
+        `;
+        list.appendChild(li);
+    });
+}
+
+// ============== 长期任务逻辑 ==============
+function setLongTermTask() {
+    const goal = document.getElementById('longTermGoal').value.trim();
+    const deadline = document.getElementById('deadline').value;
+    const plan = document.getElementById('dailyPlan').value.trim();
+
+    if (!goal || !deadline || !plan) {
+        alert('请填写完整信息');
+        return;
+    }
+
+    userData.longTermTask = { goal, deadline, plan, createdAt: new Date().toISOString() };
+    saveUserData();
+    displayLongTermTask();
+
+    // 清空表单
+    document.getElementById('longTermGoal').value = '';
+    document.getElementById('deadline').value = '';
+    document.getElementById('dailyPlan').value = '';
+}
+
+function displayLongTermTask() {
+    const container = document.getElementById('longTermDisplay');
+    container.innerHTML = '';
+
+    if (!userData.longTermTask) return;
+
+    const { goal, deadline, plan } = userData.longTermTask;
+    const daysLeft = Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
+
+    const div = document.createElement('div');
+    div.className = 'long-term-task';
+    div.innerHTML = `
+        <div class="task-text">${goal}</div>
+        <div class="task-text">每日计划：${plan}</div>
+        <div class="countdown">倒计时：${daysLeft > 0 ? daysLeft + '天' : '已到期'}</div>
+    `;
+    container.appendChild(div);
+}
+
+// ============== 小知识 ==============
+function updateKnowledge() {
+    const idx = Math.floor(Math.random() * knowledgePool.length);
+    document.getElementById('knowledgeText').textContent = knowledgePool[idx];
+}
+
+// ============== 数据持久化 ==============
+function saveUserData() {
+    localStorage.setItem('悬赏金任务板', JSON.stringify(userData));
+}
+
+function loadUserData() {
+    const saved = localStorage.getItem('悬赏金任务板');
+    if (saved) {
+        try {
+            userData = JSON.parse(saved);
+            // 确保字段存在
+            userData.level = userData.level || 0;
+            userData.experience = userData.experience || 0;
+            userData.dailyTasks = userData.dailyTasks || [];
+            userData.longTermTask = userData.longTermTask || null;
+            userData.lastReset = userData.lastReset || null;
+        } catch (e) {
+            console.error('本地数据损坏，使用默认值');
+            resetUserData();
+        }
+    } else {
+        resetUserData();
+    }
+}
+
+function resetUserData() {
+    userData = {
         level: 0,
         experience: 0,
         dailyTasks: [],
-        customTasks: [],
-        maxCustomTasks: 2,
+        longTermTask: null,
         lastReset: null
     };
-
-    // 页面加载时初始化
-    window.onload = function() {
-        loadUserData();
-        initApp();
-    };
-
-    function initApp() {
-        const today = new Date().toDateString();
-        
-        // 检查是否需要重置每日任务（每天只刷新一次）
-        if (!userData.lastReset || userData.lastReset !== today) {
-            userData.dailyTasks = generateRandomTasks(3);
-            userData.lastReset = today;
-            saveUserData();
-        }
-        
-        // 更新界面
-        updateTaskLimit();
-        renderTasks();
-        updateKnowledge();
-        
-        // 如果已有生日数据，更新经验值
-        const birthDate = document.getElementById('birthDate').value;
-        if (birthDate) {
-            calculateExperience();
-        }
-    }
-
-    // 计算经验值（按天数）
-    function calculateExperience() {
-        const birthDateInput = document.getElementById('birthDate').value;
-        if (!birthDateInput) return;
-
-        const birthDate = new Date(birthDateInput);
-        const today = new Date();
-        
-        // 计算总天数
-        const diffTime = Math.abs(today - birthDate);
-        const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        userData.level = Math.floor(totalDays / 365);
-        userData.experience = Math.floor((totalDays % 365) / 365 * 100);
-
-        saveUserData();
-        updateExperienceDisplay();
-    }
-
-    // 更新经验值显示
-    function updateExperienceDisplay() {
-        const levelDisplay = document.getElementById('levelDisplay');
-        levelDisplay.textContent = `${userData.level}级 ${userData.experience}%`;
-        document.getElementById('progressFill').style.width = `${userData.experience}%`;
-    }
-
-    // 生成随机任务
-    function generateRandomTasks(count) {
-        const shuffled = [...dailyTaskPool].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count).map(task => ({
-            text: task,
-            completed: false
-        }));
-    }
-
-    // 添加自定义任务
-    function addCustomTask() {
-        const input = document.getElementById('customTaskInput');
-        const taskText = input.value.trim();
-        
-        if (!taskText) {
-            alert('请输入任务内容');
-            return;
-        }
-
-        if (userData.customTasks.length >= userData.maxCustomTasks) {
-            alert(`每日最多只能添加${userData.maxCustomTasks}条自定义任务`);
-            return;
-        }
-
-        userData.customTasks.push({
-            text: taskText,
-            completed: false
-        });
-        
-        input.value = '';
-        saveUserData();
-        renderTasks();
-        updateTaskLimit();
-    }
-
-    // 切换任务完成状态
-    function toggleTaskCompletion(taskIndex, taskType) {
-        if (taskType === 'daily') {
-            userData.dailyTasks[taskIndex].completed = !userData.dailyTasks[taskIndex].completed;
-        } else if (taskType === 'custom') {
-            userData.customTasks[taskIndex].completed = !userData.customTasks[taskIndex].completed;
-        }
-        saveUserData();
-        renderTasks();
-    }
-
-    // 渲染所有任务
-    function renderTasks() {
-        const dailyTaskList = document.getElementById('dailyTasks');
-        const customTaskList = document.getElementById('customTasks');
-        
-        dailyTaskList.innerHTML = '';
-        customTaskList.innerHTML = '';
-        
-        // 分离已完成和未完成的任务
-        const pendingDailyTasks = userData.dailyTasks.filter(task => !task.completed);
-        const completedDailyTasks = userData.dailyTasks.filter(task => task.completed);
-        
-        const pendingCustomTasks = userData.customTasks.filter(task => !task.completed);
-        const completedCustomTasks = userData.customTasks.filter(task => task.completed);
-        
-        // 渲染未完成的每日任务（勾选框为空）
-        pendingDailyTasks.forEach((task, index) => {
-            const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && !t.completed);
-            const li = document.createElement('li');
-            li.className = 'task-item';
-            li.innerHTML = `
-                <div class="task-text">${task.text}</div>
-                <div class="task-checkbox" onclick="toggleTaskCompletion(${originalIndex}, 'daily')"></div>
-            `;
-            dailyTaskList.appendChild(li);
-        });
-        
-        // 渲染已完成的每日任务（显示 ✓）
-        completedDailyTasks.forEach((task, index) => {
-            const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && t.completed);
-            const li = document.createElement('li');
-            li.className = 'task-item completed';
-            li.innerHTML = `
-                <div class="task-text">${task.text}</div>
-                <div class="task-checkbox completed" onclick="toggleTaskCompletion(${originalIndex}, 'daily')">✓</div>
-            `;
-            dailyTaskList.appendChild(li);
-        });
-        
-        // 渲染未完成的自定义任务（勾选框为空）
-        pendingCustomTasks.forEach((task, index) => {
-            const originalIndex = userData.customTasks.findIndex(t => t.text === task.text && !t.completed);
-            const li = document.createElement('li');
-            li.className = 'task-item';
-            li.innerHTML = `
-                <div class="task-text">${task.text}</div>
-                <div class="task-checkbox" onclick="toggleTaskCompletion(${originalIndex}, 'custom')"></div>
-            `;
-            customTaskList.appendChild(li);
-        });
-        
-        // 渲染已完成的自定义任务（显示 ✓）
-        completedCustomTasks.forEach((task, index) => {
-            const originalIndex = userData.customTasks.findIndex(t => t.text === task.text && t.completed);
-            const li = document.createElement('li');
-            li.className = 'task-item completed';
-            li.innerHTML = `
-                <div class="task-text">${task.text}</div>
-                <div class="task-checkbox completed" onclick="toggleTaskCompletion(${originalIndex}, 'custom')">✓</div>
-            `;
-            customTaskList.appendChild(li);
-        });
-    }
-
-    // 更新任务数量限制
-    function updateTaskLimit() {
-        const remaining = userData.maxCustomTasks - userData.customTasks.length;
-        document.getElementById('taskLimit').textContent = `今日还可添加 ${remaining} 条任务`;
-    }
-
-    // 更新小知识
-    function updateKnowledge() {
-        const randomIndex = Math.floor(Math.random() * knowledgePool.length);
-        document.getElementById('knowledgeText').textContent = knowledgePool[randomIndex];
-    }
-
-    // 保存用户数据
-    function saveUserData() {
-        localStorage.setItem('悬赏金任务板', JSON.stringify(userData));
-    }
-
-    // 加载用户数据
-    function loadUserData() {
-        const savedData = localStorage.getItem('悬赏金任务板');
-        if (savedData) {
-            userData = JSON.parse(savedData);
-            userData.maxCustomTasks = userData.maxCustomTasks || 2;
-            userData.dailyTasks = userData.dailyTasks || [];
-            userData.customTasks = userData.customTasks || [];
-            userData.lastReset = userData.lastReset || null;
-        }
-    }
+}
