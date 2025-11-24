@@ -108,7 +108,6 @@ function renderTasks() {
     const list = document.getElementById('dailyTasks');
     list.innerHTML = '';
 
-    // 先渲染未完成，再渲染已完成
     const pending = userData.dailyTasks.filter(t => !t.completed);
     const completed = userData.dailyTasks.filter(t => t.completed);
 
@@ -116,10 +115,14 @@ function renderTasks() {
         const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && t.completed === task.completed);
         const li = document.createElement('li');
         li.className = `task-item ${task.completed ? 'completed' : ''}`;
+        
+        // 仅在已完成时显示 ✓，否则留空
+        const checkboxContent = task.completed ? '✓' : '';
+        const checkboxClass = task.completed ? 'task-checkbox completed' : 'task-checkbox';
+        
         li.innerHTML = `
             <div class="task-text">${task.text}</div>
-            <div class="task-checkbox ${task.completed ? 'completed' : ''}" 
-                 onclick="toggleTaskCompletion(${originalIndex})">✓</div>
+            <div class="${checkboxClass}" onclick="toggleTaskCompletion(${originalIndex})">${checkboxContent}</div>
         `;
         list.appendChild(li);
     });
