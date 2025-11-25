@@ -1,9 +1,9 @@
     // 任务数据
     const dailyTaskPool = [
         "喝一杯水", "接一杯水", "站起来跳3下", "原地转3圈", 
-        "在任意平台收藏一个自己喜欢/感兴趣的帖子", "听一首自己喜欢的歌", "认认真真刷2分钟牙", "做3次深呼吸",
+        "在任意平台收藏一个自己感兴趣的帖子", "听一首自己喜欢的歌", "认真刷牙2分钟", "做3次深呼吸",
         "伸个懒腰", "学鸭子走路", "拍一张天空的照片","顺时针扭动手腕10次", "找到三个紫色物品", "对着空气来两拳",
-        "对着生活笑一笑算辽", "试着约别人一起吃饭","绕着房间走一圈", "打扫一遍房间",
+        "对着生活笑一笑算辽", "试着约别人一起吃饭","绕着房间走一圈","找到一片落叶并仔细观赏上面的纹路",
         "闭目休息60秒", "阅读身边最近一个物品上的文字", "吃掉自己身边最近的食物","与任意NPC说早安/晚安",
     ];
 
@@ -18,7 +18,7 @@
         "与NPC对战可能会被制止，若坚持对战可能解锁新地点",
         "佩戴合适的眼镜，可以有效提升您的游戏画质",
         "别担心！可通过进食解决饥饿状态",
-        "白天亮度将自动调整至最高，夜晚则会降低",
+        "本世界白天默认亮度为当日最高，夜晚则会降低",
         "您可通过商城购买心仪的物品",
         "您可以通过消耗金币获取载具，提升自身移速",
         "水下呼吸时间有限，请注意氧气值",
@@ -56,14 +56,17 @@ function initApp() {
 
     renderTasks();
     updateKnowledge();
-    displayLongTermTask(); // 显示长期任务
+    displayLongTermTask();
 
-    const birthDate = document.getElementById('birthDate').value;
-    if (birthDate) {
-        calculateExperience();
+    // 👇 关键：无论是否新输入生日，只要 userData 有 level/experience，就更新显示
+    if (userData.level !== undefined || userData.experience !== undefined) {
+        updateExperienceDisplay();
     }
 }
-
+function updateExperienceDisplay() {
+    document.getElementById('levelDisplay').textContent = `${userData.level}级 ${userData.experience}%`;
+    document.getElementById('progressFill').style.width = `${userData.experience}%`;
+}
 // ============== 经验值计算 ==============
 function calculateExperience() {
     const birthDateInput = document.getElementById('birthDate').value;
