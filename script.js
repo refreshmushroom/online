@@ -1,13 +1,265 @@
-    // 任务数据
-    const dailyTaskPool = [
+// 用户数据结构
+let userData = {
+    level: 0,
+    experience: 0,
+    dailyTasks: [],
+    longTermTasks: [], // 改为数组，最多3个
+    lastReset: null
+};
+
+// 初始化应用
+function initApp() {
+    loadUserData();
+    userData.waterCount = userData.waterCount || 0;
+    const today = new Date().toDateString();
+
+    if (!userData.lastReset || userData.lastReset !== today) {
+        // 重置每日数据
+        userData.waterCount = 0; // 👈 新增：每天清零饮水计数
+        userData.dailyTasks = userData.dailyTasks.filter(t => t.longTermId !== undefined); // 保留长期任务
+        const randomTasks = generateRandomTasks(3);
+        userData.dailyTasks.push(...randomTasks.map(text => ({ text, completed: false })));
+        userData.lastReset = today;
+        saveUserData();
+    }
+
+    renderTasks();
+    updateKnowledge();
+    if (userData.level !== undefined) {
+        updateExperienceDisplay();
+    }
+}
+
+// 加载用户数据
+function loadUserData() {
+    const saved = localStorage.getItem('earthOnlineData');
+    if (saved) {
+        try {
+            Object.assign(userData, JSON.parse(saved));
+            // 兼容旧版单个 longTermTask
+            if (userData.longTermTask && typeof userData.longTermTask === 'object' && !Array.isArray(userData.longTermTask)) {
+                userData.longTermTasks = [userData.longTermTask];
+                delete userData.longTermTask;
+            }
+            userData.longTermTasks = userData.longTermTasks || [];
+            userData.dailyTasks = userData.dailyTasks || [];
+        } catch (e) {
+            resetUserData();
+        }
+    } else {
+        resetUserData();
+    }
+}
+
+// 重置用户数据
+function resetUserData() {
+    userData = {
+        level: 0,
+        experience: 0,
+        dailyTasks: [],
+        longTermTasks: [],
+        waterCount: 0, // 👈 新增
+        lastReset: null
+    };
+}
+
+// 保存用户数据
+function saveUserData() {
+    localStorage.setItem('earthOnlineData', JSON.stringify(userData));
+}
+
+// 生成随机每日任务
+function generateRandomTasks(count) {
+    const tasks = [
         "喝一杯水", "接一杯水", "站起来跳3下", "原地转3圈", 
         "在任意平台收藏一个自己感兴趣的帖子", "听一首自己喜欢的歌", "认真刷牙2分钟", "做3次深呼吸",
         "伸个懒腰", "学鸭子走路", "拍一张天空的照片","顺时针扭动手腕10次", "找到三个紫色物品", "对着空气来两拳",
         "对着生活笑一笑算辽", "试着约别人一起吃饭","绕着房间走一圈","找到一片落叶并仔细观赏上面的纹路",
         "闭目休息60秒", "阅读身边最近一个物品上的文字", "吃掉自己身边最近的食物","与任意NPC说早安/晚安",
     ];
+    const shuffled = [...tasks].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+}
 
-    const knowledgePool = [
+// 计算经验（根据出生日期）
+function calculateExperience() {
+    const birthInput = document.getElementById('birthDate').value;
+    if (!birthInput) return;
+
+    const birthDate = new Date(birthInput);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+
+    if (age < 0 || age > 150) {
+        alert('请输入合理的出生日期');
+        return;
+    }
+
+    userData.level = age;
+    userData.experience = Math.min(100, Math.max(0, ((today - birthDate) / (365.25 * 24 * 60 * 60 * 1000) - age) * 100));
+
+    saveUserData();
+    updateExperienceDisplay();
+}
+
+// 更新等级显示
+function updateExperienceDisplay() {
+    document.getElementById('levelDisplay').textContent = `${userData.level}级 ${Math.round(userData.experience)}%`;
+    document.getElementById('progressFill').style.width = `${userData.experience}%`;
+}
+
+// 渲染任务列表
+function renderTasks() {
+    const list = document.getElementById('dailyTasks');
+    list.innerHTML = '';
+
+    const today = new Date();
+
+    // === 1. 固定饮水任务（不可删除，可点击+1）===
+    const waterItem = document.createElement('li');
+    waterItem.className = 'task-item';
+    waterItem.style.cursor = 'pointer';
+    waterItem.innerHTML = `
+        <div class="task-text">今日饮水了吗？ 今日喝了（${userData.waterCount}）杯水。</div>
+        <div class="task-checkbox" style="visibility: hidden;"></div>
+    `;
+    waterItem.querySelector('.task-text').onclick = () => {
+        userData.waterCount = (userData.waterCount || 0) + 1;
+        saveUserData();
+        renderTasks(); // 重新渲染以更新数字
+    };
+    list.appendChild(waterItem);
+
+    // === 2. 同步长期任务倒计时并渲染 ===
+    userData.dailyTasks = userData.dailyTasks.map(task => {
+        if (task.longTermId !== undefined) {
+            const lt = userData.longTermTasks.find(t => t.id === task.longTermId);
+            if (lt) {
+                const daysLeft = Math.ceil((new Date(lt.deadline) - today) / (1000 * 60 * 60 * 24));
+                let countdown = '';
+                if (daysLeft > 0) {
+                    countdown = ` · 倒计时 ${daysLeft}天`;
+                } else if (daysLeft === 0) {
+                    countdown = ' · 今天截止！';
+                } else {
+                    countdown = ' · 已到期';
+                }
+                return { ...task, text: `${lt.plan}${countdown}` };
+            }
+        }
+        return task;
+    });
+
+    // 渲染其他任务（长期 + 随机）
+    userData.dailyTasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.className = `task-item ${task.completed ? 'completed' : ''}`;
+
+        const isLongTerm = task.longTermId !== undefined;
+
+        const checkboxContent = task.completed ? '✓' : '';
+        const checkboxClass = task.completed ? 'task-checkbox completed' : 'task-checkbox';
+
+        const deleteBtn = isLongTerm 
+            ? `<button class="delete-btn" onclick="removeLongTermTask(${task.longTermId})">×</button>`
+            : '';
+
+        li.innerHTML = `
+            <div class="task-text">${task.text}</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="${checkboxClass}" onclick="toggleTaskCompletion(${index})">${checkboxContent}</div>
+                ${deleteBtn}
+            </div>
+        `;
+        list.appendChild(li);
+    });
+
+    saveUserData();
+}
+
+// 切换任务完成状态
+function toggleTaskCompletion(index) {
+    userData.dailyTasks[index].completed = !userData.dailyTasks[index].completed;
+    saveUserData();
+    renderTasks();
+}
+
+// 设定长期任务（最多3个）
+function setLongTermTask() {
+    const goal = document.getElementById('longTermGoal').value.trim();
+    const deadline = document.getElementById('deadline').value;
+    const plan = document.getElementById('dailyPlan').value.trim();
+
+    if (!goal || !deadline || !plan) {
+        alert('请填写完整信息');
+        return;
+    }
+
+    if (userData.longTermTasks.length >= 3) {
+        alert('最多只能设置 3 个长期任务哦！');
+        return;
+    }
+
+    const newTask = {
+        id: Date.now(),
+        goal,
+        deadline,
+        plan,
+        createdAt: new Date().toISOString()
+    };
+
+    userData.longTermTasks.push(newTask);
+
+    const daysLeft = calculateDaysLeft(deadline);
+    let countdownText = '';
+    if (daysLeft > 0) {
+        countdownText = ` · 倒计时 ${daysLeft}天`;
+    } else if (daysLeft === 0) {
+        countdownText = ' · 今天截止！';
+    } else {
+        countdownText = ' · 已到期';
+    }
+
+    userData.dailyTasks.unshift({
+        text: `${plan}${countdownText}`,
+        completed: false,
+        longTermId: newTask.id
+    });
+
+    saveUserData();
+    renderTasks();
+
+    // 清空表单
+    document.getElementById('longTermGoal').value = '';
+    document.getElementById('deadline').value = '';
+    document.getElementById('dailyPlan').value = '';
+}
+
+// 删除长期任务
+function removeLongTermTask(longTermId) {
+    if (!confirm('确定要删除这个长期任务吗？')) return;
+
+    userData.longTermTasks = userData.longTermTasks.filter(t => t.id !== longTermId);
+    userData.dailyTasks = userData.dailyTasks.filter(task => task.longTermId !== longTermId);
+
+    saveUserData();
+    renderTasks();
+}
+
+// 计算剩余天数
+function calculateDaysLeft(deadline) {
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    return Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+}
+
+// 显示小知识
+function updateKnowledge() {
+    const knowledgeList = [
         "通常情况下，假花不需要浇水",
         "想要房间整洁如新？试试打扫卫生吧",
         "前往超市，可以获得更多食物",
@@ -29,200 +281,47 @@
         "小知识：刚烧开的水比放置一会儿的水更烫",
         "与外域NPC沟通不畅？试试增加语言拓展包",
     ];
-
-// ============== 用户数据 ==============
-let userData = {
-    level: 0,
-    experience: 0,
-    dailyTasks: [],
-    longTermTask: null, // 新增字段
-    lastReset: null
-};
-
-// ============== 初始化 ==============
-window.onload = function () {
-    loadUserData();
-    initApp();
-};
-
-function initApp() {
-    const today = new Date().toDateString();
-
-    if (!userData.lastReset || userData.lastReset !== today) {
-        userData.dailyTasks = generateRandomTasks(3);
-        userData.lastReset = today;
-        saveUserData();
-    }
-
-    renderTasks();
-    updateKnowledge();
-    displayLongTermTask();
-
-    // 👇 关键：无论是否新输入生日，只要 userData 有 level/experience，就更新显示
-    if (userData.level !== undefined || userData.experience !== undefined) {
-        updateExperienceDisplay();
-    }
-}
-function updateExperienceDisplay() {
-    document.getElementById('levelDisplay').textContent = `${userData.level}级 ${userData.experience}%`;
-    document.getElementById('progressFill').style.width = `${userData.experience}%`;
-}
-// ============== 经验值计算 ==============
-function calculateExperience() {
-    const birthDateInput = document.getElementById('birthDate').value;
-    if (!birthDateInput) return;
-
-    const birthDate = new Date(birthDateInput);
-    const today = new Date();
-
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-    if (months < 0) {
-        years--;
-        months += 12;
-    }
-
-    const totalMonths = years * 12 + months;
-    userData.level = Math.floor(totalMonths / 12);
-    userData.experience = Math.floor((totalMonths % 12) / 12 * 100);
-
-    saveUserData();
-    updateExperienceDisplay();
+    const random = knowledgeList[Math.floor(Math.random() * knowledgeList.length)];
+    document.getElementById('knowledgeText').textContent = random;
 }
 
-function toggleTaskCompletion(index) {
-    userData.dailyTasks[index].completed = !userData.dailyTasks[index].completed;
-    saveUserData();
-    renderTasks();
-}
+// BMI 计算
+function calculateBMI() {
+    const heightInput = document.getElementById('heightInput').value;
+    const weightInput = document.getElementById('weightInput').value;
 
-// ============== 任务生成与渲染 ==============
-function generateRandomTasks(count) {
-    const shuffled = [...dailyTaskPool].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count).map(task => ({ text: task, completed: false }));
-}
-
-function toggleTaskCompletion(index) {
-    userData.dailyTasks[index].completed = !userData.dailyTasks[index].completed;
-    saveUserData();
-    renderTasks();
-}
-
-function renderTasks() {
-    const list = document.getElementById('dailyTasks');
-    list.innerHTML = '';
-
-    const today = new Date();
-
-    // 渲染所有任务，包括长期任务的每日计划
-    userData.dailyTasks.forEach((task, i) => {
-        const originalIndex = userData.dailyTasks.findIndex(t => t.text === task.text && t.completed === task.completed);
-        const li = document.createElement('li');
-        li.className = `task-item ${task.completed ? 'completed' : ''}`;
-        
-        // 提取每日计划和倒计时天数
-        const match = task.text.match(/^(.*) · 倒计时 (\d+)天$/);
-        let taskText = task.text;
-        let daysLeft = 0;
-        if (match) {
-            taskText = match[1];
-            daysLeft = parseInt(match[2], 10);
-            
-            // 更新倒计时
-            daysLeft = calculateDaysLeft(userData.longTermTask.deadline);
-            if (daysLeft > 0) {
-                task.text = `${taskText} · 倒计时 ${daysLeft}天`;
-            } else if (daysLeft === 0) {
-                task.text = `${taskText} · 今天截止！`;
-            } else {
-                task.text = `${taskText} · 已到期`;
-            }
-        }
-
-        const checkboxContent = task.completed ? '✓' : '';
-        const checkboxClass = task.completed ? 'task-checkbox completed' : 'task-checkbox';
-        
-        li.innerHTML = `
-            <div class="task-text">${task.text}</div>
-            <div class="${checkboxClass}" onclick="toggleTaskCompletion(${originalIndex})">${checkboxContent}</div>
-        `;
-        list.appendChild(li);
-    });
-}
-
-// ============== 长期任务逻辑 ==============
-function setLongTermTask() {
-    const goal = document.getElementById('longTermGoal').value.trim();
-    const deadline = document.getElementById('deadline').value;
-    const plan = document.getElementById('dailyPlan').value.trim();
-
-    if (!goal || !deadline || !plan) {
-        alert('请填写完整信息');
+    if (!heightInput || !weightInput) {
+        alert('请输入身高和体重');
         return;
     }
 
-    // 添加长期任务的每日计划到每日任务列表中
-    userData.longTermTask = { goal, deadline, plan, createdAt: new Date().toISOString() };
-    
-    // 确保每日计划不会重复添加
-    const existingTaskIndex = userData.dailyTasks.findIndex(task => task.text === plan);
-    if (existingTaskIndex === -1) {
-        userData.dailyTasks.unshift({ text: `${plan} · 倒计时 ${calculateDaysLeft(deadline)}天`, completed: false });
+    const height = parseFloat(heightInput);
+    const weight = parseFloat(weightInput);
+
+    if (height <= 0 || weight <= 0) {
+        alert('身高和体重必须大于0');
+        return;
     }
-    
-    saveUserData();
-    renderTasks(); // 重新渲染任务列表
 
-    // 清空表单
-    document.getElementById('longTermGoal').value = '';
-    document.getElementById('deadline').value = '';
-    document.getElementById('dailyPlan').value = '';
-}
+    const heightInMeters = height / 100;
+    const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
 
-// 计算剩余天数
-function calculateDaysLeft(deadline) {
-    const today = new Date();
-    const deadlineDate = new Date(deadline);
-    return Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
-}
+    let message = `<strong>你的 BMI 是：${bmi}</strong><br><br>`;
 
-// ============== 小知识 ==============
-function updateKnowledge() {
-    const idx = Math.floor(Math.random() * knowledgePool.length);
-    document.getElementById('knowledgeText').textContent = knowledgePool[idx];
-}
-
-// ============== 数据持久化 ==============
-function saveUserData() {
-    localStorage.setItem('悬赏金任务板', JSON.stringify(userData));
-}
-
-function loadUserData() {
-    const saved = localStorage.getItem('悬赏金任务板');
-    if (saved) {
-        try {
-            userData = JSON.parse(saved);
-            // 确保字段存在
-            userData.level = userData.level || 0;
-            userData.experience = userData.experience || 0;
-            userData.dailyTasks = userData.dailyTasks || [];
-            userData.longTermTask = userData.longTermTask || null;
-            userData.lastReset = userData.lastReset || null;
-        } catch (e) {
-            console.error('本地数据损坏，使用默认值');
-            resetUserData();
-        }
+    if (bmi <= 18.5) {
+        message += '你的 BMI 值太低啦！要多吃肉蛋奶哦～<br>多注意身体健康!';
+    } else if (bmi <= 23.9) {
+        message += '你的 BMI 指数很正常哦，继续保持！<br>你正在好好照顾自己，真棒！';
+    } else if (bmi <= 27.9) {
+        message += '你的 BMI 稍高一点点～<br>可以通过饮食控制和适当锻炼来调整哦！<br>比如多吃蔬菜水果、适量粗粮，少吃油腻或高热量食物！';
     } else {
-        resetUserData();
+        message += '你的 BMI 偏高啦～<br>别担心！可以通过合理的饮食和适度运动改善。<br>建议多吃蔬菜水果和粗粮，减少高油高糖摄入，每天动一动，身体会越来越有活力的！';
     }
+
+    const resultDiv = document.getElementById('bmiResult');
+    resultDiv.innerHTML = message;
+    resultDiv.style.display = 'block';
 }
 
-function resetUserData() {
-    userData = {
-        level: 0,
-        experience: 0,
-        dailyTasks: [],
-        longTermTask: null,
-        lastReset: null
-    };
-}
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', initApp);
