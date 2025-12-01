@@ -9,7 +9,7 @@ let userData = {
 
 // 初始化应用
 function initApp() {
-    loadUserData();
+    Data();
     userData.waterCount = userData.waterCount || 0;
     const today = new Date().toDateString();
 
@@ -43,6 +43,8 @@ function loadUserData() {
             }
             userData.longTermTasks = userData.longTermTasks || [];
             userData.dailyTasks = userData.dailyTasks || [];
+            userData.dailyCards = userData.dailyCards || null;
+            userData.cardsDrawnDate = userData.cardsDrawnDate || null;
         } catch (e) {
             resetUserData();
         }
@@ -58,7 +60,9 @@ function resetUserData() {
         experience: 0,
         dailyTasks: [],
         longTermTasks: [],
-        waterCount: 0, // 👈 新增
+        waterCount: 0,
+        dailyCards: null,      
+        cardsDrawnDate: null,  
         lastReset: null
     };
 }
@@ -321,6 +325,137 @@ function calculateBMI() {
     const resultDiv = document.getElementById('bmiResult');
     resultDiv.innerHTML = message;
     resultDiv.style.display = 'block';
+
+    //目标：加入卡牌占卜功能，通过随机发放塔罗牌，并显示结果
+    // 纸牌解读库
+const cardInterpretations = {
+    '♠A': '商业上的交易、谈判都会很顺利。',
+    '♠K': '最近会有喜事。',
+    '♠Q': '会遇到一个很中意的人。',
+    '♠J': '沉沦于玩乐，会落得身败名裂的下场。',
+    '♠10': '生活不安定，又逢意外灾难。',
+    '♠9': '有非常好的属下和家庭。',
+    '♠8': '有精神方面的焦虑症。',
+    '♠7': '会有意想不到的事发生。',
+    '♠6': '会给别人很好的印象。',
+    '♠5': '平安无事，但若能从事新的工作，就会失败。',
+    '♠4': '为了纠纷的事情，将会十分忙碌。',
+    '♠3': '过去的事会曝光。',
+    '♠2': '幸福的生活会有麻烦介入。',
+
+    '♥A': '碰到初恋情人，并旧情复燃。',
+    '♥K': '会有新朋友。',
+    '♥Q': '与人合伙事业会成功。',
+    '♥J': '受长辈的提拔嘉奖。',
+    '♥10': '好运当头。',
+    '♥9': '无论是年长者还是晚辈，都会信任你。',
+    '♥8': '恋爱中的人，一定会达到目的。',
+    '♥7': '素不相识的人，会坦白地向你透露心中的爱慕。',
+    '♥6': '某人正暗恋着你。',
+    '♥5': '有人会约你。',
+    '♥4': '会被情人误会。',
+    '♥3': '注意会掉东西。',
+    '♥2': '会收到珍贵的礼物。',
+
+    '♦A': '被麻烦事缠身。',
+    '♦K': '注意意外事故。',
+    '♦Q': '受到别人嫉妒。',
+    '♦J': '计划会失败。',
+    '♦10': '会遇到扒手。',
+    '♦9': '失去财产。',
+    '♦8': '被情人厌恶。',
+    '♦7': '缺钱。',
+    '♦6': '找到一线希望。',
+    '♦5': '任何事都与愿相违。',
+    '♦4': '和家人疏远。',
+    '♦3': '情人背叛你。',
+    '♦2': '注意生病。',
+
+    '♣A': '事情会朝目标发展。',
+    '♣K': '判断容易产生错误。',
+    '♣Q': '过于干涉别人，别人也会受不了的。',
+    '♣J': '注意忘记东西与掉落东西。',
+    '♣10': '要财运亨通，起头是很重要的。',
+    '♣9': '长时间辛苦，有代价了。',
+    '♣8': '很需要别人帮忙。',
+    '♣7': '没有赌运。',
+    '♣6': '为彼此失和而苦恼。',
+    '♣5': '会有好点子。',
+    '♣4': '会发生内讧。',
+    '♣3': '运气不好，身体也有影响。',
+    '♣2': '对他人的批评不要计较，否则会受骗。'
+};
+
+const suits = ['♠', '♥', '♦', '♣'];
+const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function drawDailyCards() {
+    const today = new Date().toDateString();
+
+    // 如果今天已抽过，直接显示
+    if (userData.dailyCards && userData.cardsDrawnDate === today) {
+        renderCards(userData.dailyCards);
+        document.getElementById('drawCardsBtn').disabled = true;
+        document.getElementById('drawCardsBtn').textContent = '今日已抽取 ✨';
+        return;
+    }
+
+    // 否则生成3张新牌
+    const drawn = [];
+    for (let i = 0; i < 3; i++) {
+        const suit = suits[Math.floor(Math.random() * suits.length)];
+        const rank = ranks[Math.floor(Math.random() * ranks.length)];
+        drawn.push(suit + rank);
+    }
+
+    userData.dailyCards = drawn;
+    userData.cardsDrawnDate = today;
+    saveUserData();
+
+    renderCards(drawn);
+    document.getElementById('drawCardsBtn').disabled = true;
+    document.getElementById('drawCardsBtn').textContent = '今日已抽取 ✨';
+}
+
+function renderCards(cards) {
+    const container = document.getElementById('cardsResult');
+    container.innerHTML = '';
+
+    cards.forEach(card => {
+        const interpretation = cardInterpretations[card] || '未知牌义';
+        const suit = card.charAt(0);
+        let suitColor = '#000';
+        if (suit === '♥' || suit === '♦') suitColor = '#e74c3c';
+
+        const cardEl = document.createElement('div');
+        cardEl.style.padding = '12px';
+        cardEl.style.borderRadius = '8px';
+        cardEl.style.background = '#fff';
+        cardEl.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+        cardEl.style.fontFamily = 'monospace';
+        cardEl.innerHTML = `
+            <div style="font-size: 1.4em; margin-bottom: 6px; color: ${suitColor};">${card}</div>
+            <div style="color: #2c3e50; line-height: 1.5;">${interpretation}</div>
+        `;
+        container.appendChild(cardEl);
+    });
+}
+
+// 页面加载时检查是否已抽牌
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const today = new Date().toDateString();
+        if (userData.dailyCards && userData.cardsDrawnDate === today) {
+            renderCards(userData.dailyCards);
+            const btn = document.getElementById('drawCardsBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '今日已抽取 ✨';
+            }
+        }
+    }, 100);
+});
+
 }
 
 // 页面加载时初始化
